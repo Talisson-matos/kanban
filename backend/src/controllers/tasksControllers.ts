@@ -1,38 +1,34 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database.js';
 
-export async function listarTarefas(req: Request, res: Response) {
+export const createTask = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
-    const [rows] = await pool.query('SELECT * FROM tasks WHERE user_id = ?', [userId]);
-    res.json(rows);
-  } catch (err) {
-    console.error('💥 Erro ao buscar tarefas:', err);
-    res.status(500).json({ message: 'Erro interno ao buscar tarefas' });
-  }
-}
-
-export async function criarTarefa(req: Request, res: Response) {
-  try {
-    const userId = (req as any).user.id;
-    const { titulo, status } = req.body;
-
-    if (!titulo || !status) {
-      return res.status(400).json({ message: 'Título e status obrigatórios.' });
+    const { title, description, isChecked} = req.body;
+    console.log('💡 Corpo recebido no backend:', req.body);
+    if (!title) {
+      return res.status(400).json({ message: 'O título da tarefa é obrigatório.' });
+    }
+    if (!description) {
+      return res.status(400).json({ message: 'A descrição da tarefa é obrigatorio.' });
     }
 
-    const [result] = await pool.query(
-      'INSERT INTO tasks (titulo, status, user_id) VALUES (?, ?, ?)',
-      [titulo, status, userId]
-    );
-
-    res.status(201).json({
-      id: (result as any).insertId,
-      titulo,
-      status
-    });
-  } catch (err) {
-    console.error('💥 Erro ao criar tarefa:', err);
-    res.status(500).json({ message: 'Erro ao salvar tarefa' });
+    await pool.query('INSERT INTO tasks (title, description, urgent) VALUES (?,?,?)', [title,description,isChecked]);
+    
+    const [tasks] = await pool.query('SELECT * FROM tasks');
+    
+    res.json(tasks);
+  } catch (error) {
+    console.error('Erro ao criar tarefa:', error);
+    res.status(500).json({ message: 'Erro interno ao criar tarefa.' });
   }
-}
+};
+
+export const getTasks = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM tasks');
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro ao buscar tarefas' });
+  }
+};

@@ -1,10 +1,7 @@
-import { Router, RequestHandler } from 'express';
-import { criarTarefa, listarTarefas } from '../controllers/tasksControllers.js';
-import { ensureAuth } from '../middleware/authMiddleware.js';
+import express, { RequestHandler } from 'express';
+import { createTask, getTasks } from '../controllers/taskscontrollers.js';
 
-const router = Router();
-
-router.get('/', ensureAuth as RequestHandler, listarTarefas as RequestHandler);
-router.post('/', ensureAuth as RequestHandler, criarTarefa as RequestHandler);
-
+const router = express.Router();
+router.post('/tasks', createTask as RequestHandler);
+router.get('/tasks', getTasks as RequestHandler);
 export default router;
