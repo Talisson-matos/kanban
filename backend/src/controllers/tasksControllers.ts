@@ -3,7 +3,7 @@ import { pool } from '../config/database.js';
 
 export const createTask = async (req: Request, res: Response) => {
   try {
-    const { title, description, isChecked} = req.body;
+    const { title, description, isChecked, status = 'afazer'} = req.body;
     console.log('💡 Corpo recebido no backend:', req.body);
     if (!title) {
       return res.status(400).json({ message: 'O título da tarefa é obrigatório.' });
@@ -12,7 +12,7 @@ export const createTask = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'A descrição da tarefa é obrigatorio.' });
     }
 
-    await pool.query('INSERT INTO tasks (title, description, urgent) VALUES (?,?,?)', [title,description,isChecked]);
+    await pool.query('INSERT INTO tasks (title, description, urgent, status) VALUES (?,?,?,?)', [title,description,isChecked,status]);
     
     const [tasks] = await pool.query('SELECT * FROM tasks');
     
@@ -32,3 +32,4 @@ export const getTasks = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Erro ao buscar tarefas' });
   }
 };
+
