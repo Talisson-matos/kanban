@@ -1,0 +1,12 @@
+CRIAÇÃO DE BANCO DE DADOS EM EXCEL
+
+► Apelação de CHAMADO para criação de banco de dados em excel de plantas medicinais e fitoterápicos.
+
+► Período crítico de 2 semanas;
+
+► Requerido mínimo 500 IDs distintas e 10 URLs ( 2 de acesso exterior ).
+
+
+
+
+

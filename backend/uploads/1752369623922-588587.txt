@@ -1,0 +1,384 @@
+
+
+
+Hoje
+Você disse
+Do que se trata isto : multipart/form-data
+O Copilot disse
+✨ Boa pergunta, Talisson! multipart/form-data é um tipo de codificação usado principalmente em requisições HTTP quando você precisa enviar dados mistos, como textos e arquivos (imagens, PDFs, etc.), para um servidor — geralmente por meio de um formulário.
+
+📦 Em outras palavras:
+É como embalar vários tipos de informações em "partes separadas", cada uma com seu próprio rótulo e conteúdo, dentro de uma mesma entrega. Ideal para uploads.
+
+🧠 Exemplo prático:
+Imagine que você está preenchendo um formulário com:
+
+Seu nome (texto)
+
+Uma foto de perfil (imagem)
+
+Um arquivo de currículo (PDF)
+
+Esse combo é enviado com multipart/form-data, que divide cada item em um bloco próprio para que o backend consiga identificar e processar tudo corretamente.
+
+⚙️ Combinado com React ou Vite?
+Se você estiver usando isso no seu projeto com React + Vite + TypeScript, pode ser que esteja lidando com uploads de arquivos. Algo como:
+
+ts
+
+Copiar
+const formData = new FormData();
+formData.append('nome', 'Talisson');
+formData.append('arquivo', fileInput.files[0]);
+
+fetch('/upload', {
+  method: 'POST',
+  body: formData,
+});
+Curtiu? Posso te mostrar como isso se conecta com seu backend ou te ajudar a montar uma interface para upload. Quer seguir nessa ideia? 😄
+
+
+
+
+
+Você disse
+Poderia me ajudar, fiz uma requisição post para o back:
+deu este erro →
+code: 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD',
+  errno: 1366,
+  sql: "INSERT INTO tasks (title, description, urgent, file_path) VALUES ('castanha', 'mineral divertido', 'true', '1752367094635-440650464.txt')", 
+  sqlState: 'HY000',
+  sqlMessage: "Incorrect integer value: 'true' for column 'urgent' at row 1"
+parece que o valor true não esta batendo  com a coluna urgente, entretando não encontro aonde esta este problema, confira o meu codigo e veja aonde esta o erro:
+
+import type { Request, Response } from 'express'
+import { pool } from '../config/database.js'
+import multer from 'multer'
+import path from 'path'
+import fs from 'fs'
+
+// ⬇️ Interface para permitir acesso a req.file (vindo do multer)
+interface MulterRequest extends Request {
+  file?: Express.Multer.File
+}
+
+// ⬇️ Cria diretório de uploads (se ainda não existir)
+const uploadDir = path.join(process.cwd(), 'uploads')
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir)
+}
+
+// ⬇️ Configura onde salvar os arquivos e com que nome
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`
+    cb(null, uniqueName)
+  }
+})
+
+// ⬇️ Middleware multer configurado e exportado
+export const upload = multer({ storage })
+
+// ⬇️ Rota para criar nova tarefa com upload
+export const createTask = async (req: MulterRequest, res: Response) => {
+  try {
+    const { title, description, isChecked } = req.body
+    const file = req.file
+
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Título e descrição são obrigatórios.' })
+    }
+
+    const filePath = file?.filename ?? null // Armazena só o nome, não o path completo
+
+    await pool.query(
+      'INSERT INTO tasks (title, description, urgent, file_path) VALUES (?, ?, ?, ?)',
+      [title, description, isChecked, filePath]
+    )
+
+    const [tasks] = await pool.query('SELECT * FROM tasks')
+    res.json(tasks)
+  } catch (error) {
+    console.error('Erro ao criar tarefa:', error)
+    res.status(500).json({ message: 'Erro interno ao criar tarefa.' })
+  }
+}
+
+// ⬇️ Rota para buscar todas as tarefas
+export const getTasks = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM tasks')
+    res.json(rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Erro ao buscar tarefas' })
+  }
+}
+
+
+
+Já alterei de tudo , não encontro aonde esta esse erro de coluna.
+O Copilot disse
+🛠️ Achei o ponto-chave, Talisson!
+
+O erro vem da tentativa de inserir o valor 'true' na coluna urgent, que parece estar definida como inteira (INT) no banco de dados — talvez para representar 1 como verdadeiro e 0 como falso. Mas seu código está enviando a string 'true', o que quebra essa lógica.
+
+✅ Solução:
+Você precisa converter isChecked (provavelmente vindo como uma string do front-end) para um número antes do insert:
+
+ts
+
+Copiar
+const urgent = isChecked === 'true' ? 1 : 0;
+E aí você muda a query:
+
+ts
+
+Copiar
+await pool.query(
+  'INSERT INTO tasks (title, description, urgent, file_path) VALUES (?, ?, ?, ?)',
+  [title, description, urgent, filePath]
+);
+🧠 Por que isso resolve?
+MySQL não faz conversão implícita de 'true' para número, então ele dá erro. Convertendo no back-end, você garante que urgent receba os valores certos (1 ou 0) que o banco entende.
+
+Se quiser melhorar mais ainda, pode usar BOOLEAN no banco em vez de INT — mas BOOLEAN no MySQL, por baixo dos panos, ainda é tratado como TINYINT(1), então essa conversão continua sendo útil.
+
+Se quiser, posso revisar contigo o front também pra garantir que o isChecked está sendo enviado certo. Curte essa ideia? 😄
+
+
+
+
+
+Você disse
+deu certo mas agora tenho o seguinte problema:
+
+Na rota get, na hora de puxar as informações do back para o front, referindo-se ao arquivo anexo file_path, esta puxando o nome mas não da para, por exemplo baixar este arquivo que esta vindo do back, so aparece o texto como faço para resolver isto:
+
+kanban.tsx:
+
+
+  return (
+    <div>
+      <form onSubmit={handleSubmit}>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Nova tarefa"
+        />
+
+        <input
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Adicione descrição"
+        />
+
+        <label>
+          Urgente?
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={e =>
+              setIsChecked(e.target.checked)
+            }
+          />
+        </label>
+
+        <input
+          type="file"
+          onChange={handleFileChange}
+        />
+
+        {file && <p>Arquivo: {file.name}</p>}
+
+        <button type="submit">Adicionar</button>
+      </form>
+
+      <ul>
+        {tasks.map(task => (
+          <li key={task.id}>
+            <strong>{task.title}</strong> —{' '}
+            {task.description} — Urgente:{' '}
+            {task.urgent ? 'Sim' : 'Não'}<br />
+
+            Criado em:{' '}
+            {new Date(task.created_at).toLocaleString(
+              'pt-BR',
+              {
+                day: 'numeric',
+                month: 'long',
+                hour: '2-digit',
+                minute: '2-digit',
+              }
+            )}{' '}
+            | Pendência:{' '}
+            {calcularTempoDecorrido(task.created_at)}
+            {''}
+          {task.file_path}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+olhe se tenho que fazer modificação em algum lugar para puxar totalmente a informação que esta vindo do back:
+
+taskApi.ts
+
+import api from './auth'; 
+
+export const getTarefas = () => api.get('/tasks');
+
+import express, { RequestHandler } from 'express';
+import { createTask, getTasks, upload } from '../controllers/taskscontrollers.js';
+
+const router = express.Router();
+router.post('/tasks', upload.single('file'), createTask as RequestHandler);
+router.get('/tasks', getTasks as RequestHandler);
+
+taskControllers.ts
+
+// ⬇️ Rota para buscar todas as tarefas
+export const getTasks = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM tasks')
+    res.json(rows)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Erro ao buscar tarefas' })
+  }
+}
+O Copilot disse
+🚀 Boa, Talisson! O que está acontecendo é que você está exibindo o nome do arquivo, mas não está gerando o link real para download dele. O navegador precisa de uma URL acessível apontando para o arquivo — só o nome não basta.
+
+✅ Passo a passo para resolver
+1. 📂 Servir a pasta uploads como pública
+No seu server.ts ou onde inicia o Express, adicione:
+
+ts
+
+Copiar
+import express from 'express';
+import path from 'path';
+
+const app = express();
+
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+Isso permite que qualquer arquivo salvo em uploads/ seja acessado via rota /uploads/nome-do-arquivo.
+
+2. 🖥️ Atualizar o front para gerar link de download
+No seu <li> da lista de tarefas, onde mostra task.file_path, troque isso por algo assim:
+
+tsx
+
+Copiar
+{task.file_path && (
+  <a
+    href={`http://localhost:3000/uploads/${task.file_path}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    download
+  >
+    📄 Baixar arquivo
+  </a>
+)}
+Substitua http://localhost:3000 pelo endereço real da sua API, se estiver em produção ou rodando em outra porta.
+
+🧠 Dica bônus: Validar arquivos nulos
+Se por acaso file_path for null, essa lógica ainda funciona porque o link só será renderizado se existir algo.
+
+Quer deixar isso mais estiloso? Posso te ajudar a incluir ícones ou mostrar o tipo de arquivo dinamicamente.
+
+Quer seguir por aí? 😄
+
+
+
+
+
+Você disse
+me aparece ainda este dois erros:
+  {task.file_path && ( ...  A propriedade 'file_path' não existe no tipo 'Task'
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use('/api', taskRoutes);
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use((req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('📦 Corpo da requisição:', req.body);
+  }
+  next();
+});
+
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+erro deste:
+Não é possível encontrar o nome 'path
+
+
+
+Simplesmente não consigo identificar  o problema não sei se tem que tipificar alguma coisa ou fazer alguma importação
+O Copilot disse
+👀 Bora resolver esses dois pepinos juntos, Talisson!
+
+🚫 Erro 1: 'file_path' não existe no tipo 'Task'
+Isso significa que sua interface Task no front-end não tem definida a propriedade file_path, mas você está tentando acessar ela.
+
+✅ Como corrigir:
+Encontre a definição da interface Task no React (provavelmente em algum arquivo como types.ts, kanban.tsx, ou algo do tipo), e adicione file_path:
+
+ts
+
+Copiar
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  urgent: number;
+  created_at: string;
+  file_path?: string | null; // <- Adicione isso!
+}
+⚠️ Erro 2: "Não é possível encontrar o nome 'path'"
+Esse erro significa que você usou path no backend (server.ts) mas não importou o módulo do Node.js que o fornece.
+
+✅ Como corrigir:
+No topo do seu arquivo onde usa path.join, adicione:
+
+ts
+
+Copiar
+import path from 'path';
+🔥 Dica extra: Duplicação de app.use('/uploads', ...)
+Você escreveu duas vezes:
+
+ts
+
+Copiar
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+Pode deixar só uma vez, não precisa repetir.
+
+Se quiser deixar esse fluxo de download mais bonito (mostrar ícone, mostrar tipo de arquivo, etc.), só me pedir que a gente deixa isso digno de vitrine 💎
+
+Quer que eu revise sua interface completa pra garantir que tudo está tipado certinho?
+
+
+
+
+
+
+
+How can I define TypeScript interfaces correctly?
+
+What is the correct way to import modules in Node.js?
+
+What are some debugging techniques for TypeScript errors?
+Mensagem para o Copilot
+
+
+Resposta rápida
+
+
