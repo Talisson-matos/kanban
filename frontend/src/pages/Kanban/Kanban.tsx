@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios';
 import type { ChangeEvent, FormEvent } from 'react';
-import {   DndContext,  closestCenter,  useDraggable,  useDroppable} from '@dnd-kit/core'
+import { DndContext, closestCenter, useDraggable, useDroppable } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 
 interface Task {
@@ -53,6 +53,10 @@ export default function Kanban() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [status, setStatus] = useState<string>('a_fazer');
+
+  
+
 
   // modal
 
@@ -67,25 +71,39 @@ export default function Kanban() {
 
   // atualizar
 
+const atualizarTarefa = async () => {
+  if (!taskToEdit) return;
 
-  const atualizarTarefa = async () => {
-    if (!taskToEdit) return;
+  const token = localStorage.getItem('token');
 
-    try {
-      await axios.put(`http://localhost:3000/api/tasks/${taskToEdit.id}`, {
+  try {
+    await axios.put(
+      `http://localhost:3000/api/tasks/${taskToEdit.id}`,
+      {
         title,
         description,
         isChecked,
-      });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
 
-      const res = await axios.get<Task[]>('http://localhost:3000/api/tasks');
-      setTasks(res.data);
-      setIsEditing(false);
-      setTaskToEdit(null);
-    } catch (err) {
-      console.error('Erro ao atualizar tarefa:', err);
-    }
-  };
+    const res = await axios.get<Task[]>('http://localhost:3000/api/tasks', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    setTasks(res.data);
+    setIsEditing(false);
+    setTaskToEdit(null);
+  } catch (err) {
+    console.error('Erro ao atualizar tarefa:', err);
+  }
+};
 
 
 
@@ -94,7 +112,11 @@ export default function Kanban() {
     const fetchTasks = async () => {
       try {
         const res = await axios.get<Task[]>(
-          'http://localhost:3000/api/tasks'
+          'http://localhost:3000/api/tasks', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
         );
         setTasks(res.data);
       } catch (err) {
@@ -138,6 +160,7 @@ export default function Kanban() {
     formData.append('title', title);
     formData.append('description', description);
     formData.append('isChecked', String(isChecked));
+    formData.append('status', status);
     if (file) {
       formData.append('file', file);
     }
@@ -150,6 +173,7 @@ export default function Kanban() {
         {
           headers: {
             'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
           },
         }
       );
@@ -169,7 +193,11 @@ export default function Kanban() {
 
   const handleDelete = async (id: number) => {
     try {
-      await axios.delete(`http://localhost:3000/api/tasks/${id}`);
+      await axios.delete(`http://localhost:3000/api/tasks/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       // Atualiza a lista após deletar
       setTasks(prev => prev.filter(task => task.id !== id));
     } catch (err) {
@@ -177,25 +205,48 @@ export default function Kanban() {
     }
   };
 
-// status
+  // status
 
 const onDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over) return
-    const taskId = parseInt(active.id as string)
-    const novoStatus = over.id
+  const { active, over } = event;
+  if (!over) return;
 
-    try {
-      await axios.post('http://localhost:3000/api/tasks/update-status', {
+  const taskId = parseInt(active.id as string);
+  const novoStatus = over.id as string;
+  const token = localStorage.getItem('token');
+
+  // Atualizar estado local imediatamente
+  setTasks(prev => prev.map(task => 
+    task.id === taskId 
+      ? { ...task, status: novoStatus }
+      : task
+  ));
+
+  try {
+    await axios.post(
+      'http://localhost:3000/api/tasks/update-status',
+      {
         id: taskId,
         status: novoStatus
-      })
-      const res = await axios.get<Task[]>('http://localhost:3000/api/tasks')
-      setTasks(res.data)
-    } catch (error) {
-      console.error('Erro ao atualizar status da tarefa:', error)
-    }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Erro ao atualizar status da tarefa:', error);
+    // Reverter se der erro
+    const res = await axios.get<Task[]>('http://localhost:3000/api/tasks', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    setTasks(res.data);
   }
+};
+
 
 
   return (
@@ -272,44 +323,44 @@ const onDragEnd = async (event: DragEndEvent) => {
               ✏️ Editar
             </button>
 
-           
+
 
 
           </li>
         ))}
       </ul>
 
-       {isEditing && (
-              <div style={{ background: '#eee', padding: '1rem', marginTop: '1rem' }}>
-                <h3>Editar Tarefa</h3>
+      {isEditing && (
+        <div style={{ background: '#eee', padding: '1rem', marginTop: '1rem' }}>
+          <h3>Editar Tarefa</h3>
 
-                <input
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Título"
-                />
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Título"
+          />
 
-                <input
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Descrição"
-                />
+          <input
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Descrição"
+          />
 
-                <label>
-                  Urgente?
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={e => setIsChecked(e.target.checked)}
-                  />
-                </label>
+          <label>
+            Urgente?
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={e => setIsChecked(e.target.checked)}
+            />
+          </label>
 
-                <button onClick={atualizarTarefa}>Salvar alterações</button>
-                <button onClick={() => setIsEditing(false)}>Cancelar</button>
-              </div>
-            )}
+          <button onClick={atualizarTarefa}>Salvar alterações</button>
+          <button onClick={() => setIsEditing(false)}>Cancelar</button>
+        </div>
+      )}
 
-             <DndContext onDragEnd={onDragEnd} collisionDetection={closestCenter}>
+      <DndContext onDragEnd={onDragEnd} collisionDetection={closestCenter}>
         <div style={{ display: 'flex', gap: '2rem', cursor: 'grabbing' }}>
           {['a_fazer', 'fazendo', 'feito'].map(status => (
             <ColunaDroppable

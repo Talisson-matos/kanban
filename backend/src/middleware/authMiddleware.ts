@@ -3,6 +3,7 @@ import { verifyToken } from '../utils/jwt.js'; // ✅ extensão .js para ESM
 
 export function ensureAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
+  console.log('📨 Cabeçalho Authorization recebido:', authHeader);
 
   if (!authHeader) {
     console.warn('🚫 Requisição sem token.');

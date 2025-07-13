@@ -30,40 +30,55 @@ const storage = multer.diskStorage({
 export const upload = multer({ storage })
 
 // ⬇️ Rota para criar nova tarefa com upload
+
 export const createTask = async (req: MulterRequest, res: Response) => {
   try {
-    const { title, description, isChecked, status } = req.body
-    const file = req.file
+    const { title, description, isChecked, status } = req.body;
+    const file = req.file;
     const urgent = isChecked === 'true' ? 1 : 0;
+    const userId = (req as any).user.id;
+
     if (!title || !description) {
-      return res.status(400).json({ message: 'Título e descrição são obrigatórios.' })
+      return res.status(400).json({ message: 'Título e descrição são obrigatórios.' });
     }
 
-    const filePath = file?.filename ?? null // Armazena só o nome, não o path completo
+    const filePath = file?.filename ?? null;
 
     await pool.query(
-      'INSERT INTO tasks (title, description, urgent, file_path, status) VALUES (?, ?, ?, ?, ?)',
-      [title, description, urgent, filePath, status ]
-    )
+      'INSERT INTO tasks (title, description, urgent, file_path, status, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, description, urgent, filePath, status, userId]
+    );
 
-    const [tasks] = await pool.query('SELECT * FROM tasks')
-    res.json(tasks)
+    // ⬅️ Aqui o ajuste
+    const [tasksDoUsuario] = await pool.query(
+      'SELECT * FROM tasks WHERE user_id = ?',
+      [userId]
+    );
+
+    res.json(tasksDoUsuario); // ⬅️ Retorna só as tarefas do usuário
   } catch (error) {
-    console.error('Erro ao criar tarefa:', error)
-    res.status(500).json({ message: 'Erro interno ao criar tarefa.' })
+    console.error('Erro ao criar tarefa:', error);
+    res.status(500).json({ message: 'Erro interno ao criar tarefa.' });
   }
-}
+};
 
 // ⬇️ Rota para buscar todas as tarefas
-export const getTasks = async (req: Request, res: Response) => {
+export async function getTasks(req: Request, res: Response): Promise<void> {
   try {
-    const [rows] = await pool.query('SELECT * FROM tasks')
-    res.json(rows)
+    const usuarioId = (req as any).user.id; // 🔐 ID obtido do token JWT
+
+    const [tarefasDoUsuario] = await pool.query(
+      'SELECT * FROM tasks WHERE user_id = ?',
+      [usuarioId]
+    );
+
+    res.json(tarefasDoUsuario);
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ message: 'Erro ao buscar tarefas' })
+    console.error('❌ Erro ao buscar tarefas do usuário:', err);
+    res.status(500).json({ message: 'Erro ao buscar tarefas.' });
   }
 }
+
 
 // rota de atualização
 
@@ -119,6 +134,7 @@ export const downloadFile = async (req: Request, res: Response) => {
 
 export const updateStatus = async (req: Request, res: Response) => {
   const { id, status } = req.body;
+  const userId = (req as any).user.id;
 
   const validStatus = ['a_fazer', 'fazendo', 'feito'];
   if (!validStatus.includes(status)) {
@@ -127,7 +143,14 @@ export const updateStatus = async (req: Request, res: Response) => {
 
   try {
     await pool.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
-    res.status(200).json({ message: 'Status atualizado com sucesso' });
+
+    // 🔁 Após atualizar, buscar tarefas filtradas por usuário
+    const [tasksDoUsuario] = await pool.query(
+      'SELECT * FROM tasks WHERE user_id = ?',
+      [userId]
+    );
+
+    res.status(200).json(tasksDoUsuario);
   } catch (error) {
     console.error('Erro ao atualizar status:', error);
     res.status(500).json({ message: 'Erro interno ao atualizar status.' });
