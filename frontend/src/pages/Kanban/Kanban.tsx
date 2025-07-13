@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react'
 import axios from 'axios';
-import type { ChangeEvent, FormEvent } from 'react'
-
+import type { ChangeEvent, FormEvent } from 'react';
+import {   DndContext,  closestCenter,  useDraggable,  useDroppable} from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
 
 interface Task {
   id: number;
@@ -11,6 +12,37 @@ interface Task {
   urgent: boolean;
   created_at: string;
   file_path: string | null;
+  status: string;
+}
+
+function TarefaDraggable({ task }: { task: Task }) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: String(task.id)
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{ border: '1px solid gray', margin: 8, padding: 8 }}
+    >
+      <strong>{task.title}</strong> — {task.description}
+    </div>
+  )
+}
+
+function ColunaDroppable({ id, tarefas }: { id: string; tarefas: Task[] }) {
+  const { setNodeRef } = useDroppable({ id })
+
+  return (
+    <div ref={setNodeRef} style={{ padding: 10, border: '1px dashed black', minWidth: 250 }}>
+      <h3>{id}</h3>
+      {tarefas.map(task => (
+        <TarefaDraggable key={task.id} task={task} />
+      ))}
+    </div>
+  )
 }
 
 export default function Kanban() {
@@ -145,6 +177,26 @@ export default function Kanban() {
     }
   };
 
+// status
+
+const onDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over) return
+    const taskId = parseInt(active.id as string)
+    const novoStatus = over.id
+
+    try {
+      await axios.post('http://localhost:3000/api/tasks/update-status', {
+        id: taskId,
+        status: novoStatus
+      })
+      const res = await axios.get<Task[]>('http://localhost:3000/api/tasks')
+      setTasks(res.data)
+    } catch (error) {
+      console.error('Erro ao atualizar status da tarefa:', error)
+    }
+  }
+
 
   return (
     <div>
@@ -256,6 +308,19 @@ export default function Kanban() {
                 <button onClick={() => setIsEditing(false)}>Cancelar</button>
               </div>
             )}
+
+             <DndContext onDragEnd={onDragEnd} collisionDetection={closestCenter}>
+        <div style={{ display: 'flex', gap: '2rem', cursor: 'grabbing' }}>
+          {['a_fazer', 'fazendo', 'feito'].map(status => (
+            <ColunaDroppable
+              key={status}
+              id={status}
+              tarefas={tasks.filter(task => task.status === status)}
+            />
+          ))}
+        </div>
+      </DndContext>
+
     </div>
   );
 }

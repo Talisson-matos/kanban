@@ -32,7 +32,7 @@ export const upload = multer({ storage })
 // ⬇️ Rota para criar nova tarefa com upload
 export const createTask = async (req: MulterRequest, res: Response) => {
   try {
-    const { title, description, isChecked } = req.body
+    const { title, description, isChecked, status } = req.body
     const file = req.file
     const urgent = isChecked === 'true' ? 1 : 0;
     if (!title || !description) {
@@ -42,8 +42,8 @@ export const createTask = async (req: MulterRequest, res: Response) => {
     const filePath = file?.filename ?? null // Armazena só o nome, não o path completo
 
     await pool.query(
-      'INSERT INTO tasks (title, description, urgent, file_path) VALUES (?, ?, ?, ?)',
-      [title, description, urgent, filePath]
+      'INSERT INTO tasks (title, description, urgent, file_path, status) VALUES (?, ?, ?, ?, ?)',
+      [title, description, urgent, filePath, status ]
     )
 
     const [tasks] = await pool.query('SELECT * FROM tasks')
@@ -113,3 +113,23 @@ export const downloadFile = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Erro interno ao baixar arquivo' })
   }
 }
+
+
+// rota de controle para status
+
+export const updateStatus = async (req: Request, res: Response) => {
+  const { id, status } = req.body;
+
+  const validStatus = ['a_fazer', 'fazendo', 'feito'];
+  if (!validStatus.includes(status)) {
+    return res.status(400).json({ message: 'Status inválido' });
+  }
+
+  try {
+    await pool.query('UPDATE tasks SET status = ? WHERE id = ?', [status, id]);
+    res.status(200).json({ message: 'Status atualizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar status:', error);
+    res.status(500).json({ message: 'Erro interno ao atualizar status.' });
+  }
+};
