@@ -65,6 +65,40 @@ export const getTasks = async (req: Request, res: Response) => {
   }
 }
 
+// rota de atualização
+
+export const updateTask = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { title, description, isChecked } = req.body;
+  const urgent = isChecked === 'true' || isChecked === true ? 1 : 0;
+
+  try {
+    await pool.query(
+      'UPDATE tasks SET title = ?, description = ?, urgent = ? WHERE id = ?',
+      [title, description, urgent, id]
+    );
+    res.status(200).json({ message: 'Tarefa atualizada com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao atualizar tarefa:', error);
+    res.status(500).json({ message: 'Erro interno ao atualizar tarefa.' });
+  }
+};
+
+
+// deletar tarefa
+
+export const deleteTask = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    await pool.query('DELETE FROM tasks WHERE id = ?', [id]);
+    res.status(200).json({ message: 'Tarefa excluída com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao excluir tarefa:', error);
+    res.status(500).json({ message: 'Erro interno ao excluir tarefa.' });
+  }
+};
+
 // ⬇️ Nova rota para download de arquivos
 export const downloadFile = async (req: Request, res: Response) => {
   try {
