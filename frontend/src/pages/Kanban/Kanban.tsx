@@ -36,18 +36,27 @@ const baixarArquivo = async (fileName: string) => {
     const blob = new Blob([res.data], { type: mimeType });
     const url = window.URL.createObjectURL(blob);
 
-    // 👇 Abrir diretamente se for visualizável
-    if (mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('text/')) {
+    // 🔍 Abre para visualização (imagem, texto, PDF…)
+    if (
+      mimeType.startsWith('image/') ||
+      mimeType.startsWith('text/') ||
+      mimeType === 'application/pdf'
+    ) {
       window.open(url, '_blank');
-    } else {
-      // 📁 Se não der pra visualizar direto, força download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
     }
+
+    // ⬇️ Download automático
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // 🧹 Libera memória
+    window.URL.revokeObjectURL(url);
   } catch (err) {
-    console.error('Erro ao baixar:', err);
+    console.error('Erro ao baixar e abrir arquivo:', err);
   }
 };
 
