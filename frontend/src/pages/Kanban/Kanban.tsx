@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import axios from 'axios';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -15,97 +14,204 @@ interface Task {
   status: string;
 }
 
-function TarefaDraggable({ task }: { task: Task }) {
+interface Props {
+  task: Task;
+  handleDelete: (id: number) => void;
+  abrirModalDeEdicao: (task: Task) => void;
+}
+
+// Função utilitária — certifique-se de que está fora de qualquer componente
+const calcularTempoDecorrido = (createdAt: string): string => {
+  const criado = new Date(createdAt);
+  const agora = new Date();
+
+  const diffMs = agora.getTime() - criado.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return 'menos de 1 min';
+  if (diffMin < 60) return `${diffMin} min`;
+
+  const horas = Math.floor(diffMin / 60);
+  const minutos = diffMin % 60;
+  return `${horas}h ${minutos}min`;
+};
+
+export function TarefaDraggable({
+  task,
+  handleDelete,
+  abrirModalDeEdicao
+}: {
+  task: Task;
+  handleDelete: (id: number) => void;
+  abrirModalDeEdicao: (task: Task) => void;
+}) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: String(task.id)
-  })
+  });
 
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={{ border: '1px solid gray', margin: 8, padding: 8 }}
+      className="task-card bg-white p-4 rounded shadow-md flex flex-col gap-2"
     >
-      <strong>{task.title}</strong> — {task.description}
+      {/* Handle de arrasto */}
+      <div
+        {...listeners}
+        {...attributes}
+        className="drag-handle cursor-grab p-2 bg-gray-100 rounded hover:bg-gray-200 flex items-center justify-center"
+        title="Arraste aqui para mover a tarefa"
+      >
+        <span className="text-gray-600">↔️ Mover</span>
+      </div>
+
+      {/* Conteúdo da tarefa */}
+      <div className="task-content">
+        <div className="font-bold">{task.title}</div>
+        <div>{task.description}</div>
+        <div>Urgente: {task.urgent ? 'Sim' : 'Não'}</div>
+        <div>
+          Criado em:{' '}
+          {new Date(task.created_at).toLocaleString('pt-BR', {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </div>
+        <div>Pendência: {calcularTempoDecorrido(task.created_at)}</div>
+
+        {task.file_path && (
+          <a
+            href={task.file_path}
+            target="_blank"
+            className="text-blue-500 underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            📄 Baixar arquivo
+          </a>
+        )}
+      </div>
+
+      {/* Botões de ação */}
+      <div className="task-actions flex gap-2 mt-2">
+        <button
+          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(task.id);
+          }}
+        >
+          🗑️ Deletar
+        </button>
+        <button
+          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            abrirModalDeEdicao(task);
+          }}
+        >
+          ✏️ Editar
+        </button>
+      </div>
     </div>
-  )
+  );
 }
 
-function ColunaDroppable({ id, tarefas }: { id: string; tarefas: Task[] }) {
-  const { setNodeRef } = useDroppable({ id })
+
+function ColunaDroppable({
+  id,
+  tarefas,
+  handleDelete,
+  abrirModalDeEdicao
+}: {
+  id: string;
+  tarefas: Task[];
+  handleDelete: (id: number) => void;
+  abrirModalDeEdicao: (task: Task) => void;
+}) {
+  const { setNodeRef } = useDroppable({ id });
 
   return (
     <div ref={setNodeRef} style={{ padding: 10, border: '1px dashed black', minWidth: 250 }}>
       <h3>{id}</h3>
       {tarefas.map(task => (
-        <TarefaDraggable key={task.id} task={task} />
+        <TarefaDraggable
+          key={task.id}
+          task={task}
+          handleDelete={handleDelete}
+          abrirModalDeEdicao={abrirModalDeEdicao}
+        />
       ))}
     </div>
-  )
+  );
 }
 
 export default function Kanban() {
+  // Estados para o formulário de criação
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [isChecked, setIsChecked] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
+  const [status, setStatus] = useState<string>('a_fazer');
+  
+  // Estados para as tarefas
   const [tasks, setTasks] = useState<Task[]>([]);
+  
+  // Estados para o modal de edição
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [status, setStatus] = useState<string>('a_fazer');
-
-  
-
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [editDescription, setEditDescription] = useState<string>('');
+  const [editIsChecked, setEditIsChecked] = useState<boolean>(false);
 
   // modal
-
   const abrirModalDeEdicao = (task: Task) => {
     setTaskToEdit(task);
-    setTitle(task.title);
-    setDescription(task.description);
-    setIsChecked(Boolean(task.urgent));
+    setEditTitle(task.title);
+    setEditDescription(task.description);
+    setEditIsChecked(Boolean(task.urgent));
     setIsEditing(true);
   };
 
-
   // atualizar
+  const atualizarTarefa = async () => {
+    if (!taskToEdit) return;
 
-const atualizarTarefa = async () => {
-  if (!taskToEdit) return;
+    const token = localStorage.getItem('token');
 
-  const token = localStorage.getItem('token');
+    try {
+      await axios.put(
+        `http://localhost:3000/api/tasks/${taskToEdit.id}`,
+        {
+          title: editTitle,
+          description: editDescription,
+          isChecked: editIsChecked,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-  try {
-    await axios.put(
-      `http://localhost:3000/api/tasks/${taskToEdit.id}`,
-      {
-        title,
-        description,
-        isChecked,
-      },
-      {
+      // Buscar tarefas atualizadas após edição
+      const res = await axios.get<Task[]>('http://localhost:3000/api/tasks', {
         headers: {
           Authorization: `Bearer ${token}`
         }
-      }
-    );
+      });
 
-    const res = await axios.get<Task[]>('http://localhost:3000/api/tasks', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    setTasks(res.data);
-    setIsEditing(false);
-    setTaskToEdit(null);
-  } catch (err) {
-    console.error('Erro ao atualizar tarefa:', err);
-  }
-};
-
-
+      setTasks(res.data);
+      setIsEditing(false);
+      setTaskToEdit(null);
+      // Limpar os campos de edição
+      setEditTitle('');
+      setEditDescription('');
+      setEditIsChecked(false);
+    } catch (err) {
+      console.error('Erro ao atualizar tarefa:', err);
+    }
+  };
 
   // Busca tarefas ao montar o componente
   useEffect(() => {
@@ -125,22 +231,6 @@ const atualizarTarefa = async () => {
     };
     fetchTasks();
   }, []);
-
-  // Função para calcular tempo decorrido
-  const calcularTempoDecorrido = (createdAt: string): string => {
-    const criado = new Date(createdAt);
-    const agora = new Date();
-
-    const diffMs = agora.getTime() - criado.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-
-    if (diffMin < 1) return 'menos de 1 min';
-    if (diffMin < 60) return `${diffMin} min`;
-
-    const horas = Math.floor(diffMin / 60);
-    const minutos = diffMin % 60;
-    return `${horas}h ${minutos}min`;
-  };
 
   // Captura o arquivo selecionado
   const handleFileChange = (
@@ -169,7 +259,6 @@ const atualizarTarefa = async () => {
       const res = await axios.post<Task[]>(
         'http://localhost:3000/api/tasks',
         formData,
-
         {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -188,9 +277,7 @@ const atualizarTarefa = async () => {
     }
   };
 
-
-  //  deleção
-
+  // deleção
   const handleDelete = async (id: number) => {
     try {
       await axios.delete(`http://localhost:3000/api/tasks/${id}`, {
@@ -206,48 +293,45 @@ const atualizarTarefa = async () => {
   };
 
   // status
+  const onDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
 
-const onDragEnd = async (event: DragEndEvent) => {
-  const { active, over } = event;
-  if (!over) return;
+    const taskId = parseInt(active.id as string);
+    const novoStatus = over.id as string;
+    const token = localStorage.getItem('token');
 
-  const taskId = parseInt(active.id as string);
-  const novoStatus = over.id as string;
-  const token = localStorage.getItem('token');
+    // Atualizar estado local imediatamente
+    setTasks(prev => prev.map(task => 
+      task.id === taskId 
+        ? { ...task, status: novoStatus }
+        : task
+    ));
 
-  // Atualizar estado local imediatamente
-  setTasks(prev => prev.map(task => 
-    task.id === taskId 
-      ? { ...task, status: novoStatus }
-      : task
-  ));
-
-  try {
-    await axios.post(
-      'http://localhost:3000/api/tasks/update-status',
-      {
-        id: taskId,
-        status: novoStatus
-      },
-      {
+    try {
+      await axios.post(
+        'http://localhost:3000/api/tasks/update-status',
+        {
+          id: taskId,
+          status: novoStatus
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar status da tarefa:', error);
+      // Reverter se der erro
+      const res = await axios.get<Task[]>('http://localhost:3000/api/tasks', {
         headers: {
           Authorization: `Bearer ${token}`
         }
-      }
-    );
-  } catch (error) {
-    console.error('Erro ao atualizar status da tarefa:', error);
-    // Reverter se der erro
-    const res = await axios.get<Task[]>('http://localhost:3000/api/tasks', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    setTasks(res.data);
-  }
-};
-
-
+      });
+      setTasks(res.data);
+    }
+  };
 
   return (
     <div>
@@ -285,64 +369,19 @@ const onDragEnd = async (event: DragEndEvent) => {
         <button type="submit">Adicionar</button>
       </form>
 
-      <ul>
-        {tasks.map(task => (
-          <li key={task.id}>
-            <strong>{task.title}</strong> —{' '}
-            {task.description} — Urgente:{' '}
-            {task.urgent ? 'Sim' : 'Não'}<br />
-
-            Criado em:{' '}
-            {new Date(task.created_at).toLocaleString(
-              'pt-BR',
-              {
-                day: 'numeric',
-                month: 'long',
-                hour: '2-digit',
-                minute: '2-digit',
-              }
-            )}{' '}
-            | Pendência:{' '}
-            {calcularTempoDecorrido(task.created_at)}
-            {task.file_path && (
-              <a
-                href={`http://localhost:3000/uploads/${task.file_path}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-              >
-                📄 Baixar arquivo
-              </a>
-            )}
-
-            <button onClick={() => handleDelete(task.id)}>
-              🗑️ Deletar
-            </button>
-
-            <button onClick={() => abrirModalDeEdicao(task)}>
-              ✏️ Editar
-            </button>
-
-
-
-
-          </li>
-        ))}
-      </ul>
-
       {isEditing && (
         <div style={{ background: '#eee', padding: '1rem', marginTop: '1rem' }}>
           <h3>Editar Tarefa</h3>
 
           <input
-            value={title}
-            onChange={e => setTitle(e.target.value)}
+            value={editTitle}
+            onChange={e => setEditTitle(e.target.value)}
             placeholder="Título"
           />
 
           <input
-            value={description}
-            onChange={e => setDescription(e.target.value)}
+            value={editDescription}
+            onChange={e => setEditDescription(e.target.value)}
             placeholder="Descrição"
           />
 
@@ -350,13 +389,19 @@ const onDragEnd = async (event: DragEndEvent) => {
             Urgente?
             <input
               type="checkbox"
-              checked={isChecked}
-              onChange={e => setIsChecked(e.target.checked)}
+              checked={editIsChecked}
+              onChange={e => setEditIsChecked(e.target.checked)}
             />
           </label>
 
           <button onClick={atualizarTarefa}>Salvar alterações</button>
-          <button onClick={() => setIsEditing(false)}>Cancelar</button>
+          <button onClick={() => {
+            setIsEditing(false);
+            setEditTitle('');
+            setEditDescription('');
+            setEditIsChecked(false);
+            setTaskToEdit(null);
+          }}>Cancelar</button>
         </div>
       )}
 
@@ -367,11 +412,12 @@ const onDragEnd = async (event: DragEndEvent) => {
               key={status}
               id={status}
               tarefas={tasks.filter(task => task.status === status)}
+              handleDelete={handleDelete}
+              abrirModalDeEdicao={abrirModalDeEdicao}
             />
           ))}
         </div>
       </DndContext>
-
     </div>
   );
 }

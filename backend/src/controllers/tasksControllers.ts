@@ -86,13 +86,24 @@ export const updateTask = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, description, isChecked } = req.body;
   const urgent = isChecked === 'true' || isChecked === true ? 1 : 0;
+  const userId = (req as any).user.id;
 
   try {
-    await pool.query(
-      'UPDATE tasks SET title = ?, description = ?, urgent = ? WHERE id = ?',
-      [title, description, urgent, id]
+    const [result] = await pool.query(
+      'UPDATE tasks SET title = ?, description = ?, urgent = ? WHERE id = ? AND user_id = ?',
+      [title, description, urgent, id, userId]
     );
-    res.status(200).json({ message: 'Tarefa atualizada com sucesso!' });
+
+    if ((result as any).affectedRows === 0) {
+      return res.status(403).json({ message: 'Você não tem permissão para editar esta tarefa.' });
+    }
+
+    const [tasksDoUsuario] = await pool.query(
+      'SELECT * FROM tasks WHERE user_id = ?',
+      [userId]
+    );
+
+    res.status(200).json(tasksDoUsuario);
   } catch (error) {
     console.error('Erro ao atualizar tarefa:', error);
     res.status(500).json({ message: 'Erro interno ao atualizar tarefa.' });
@@ -104,15 +115,30 @@ export const updateTask = async (req: Request, res: Response) => {
 
 export const deleteTask = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const userId = (req as any).user.id;
 
   try {
-    await pool.query('DELETE FROM tasks WHERE id = ?', [id]);
-    res.status(200).json({ message: 'Tarefa excluída com sucesso!' });
+    const [result] = await pool.query(
+      'DELETE FROM tasks WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+
+    if ((result as any).affectedRows === 0) {
+      return res.status(403).json({ message: 'Você não tem permissão para deletar esta tarefa.' });
+    }
+
+    const [tasksDoUsuario] = await pool.query(
+      'SELECT * FROM tasks WHERE user_id = ?',
+      [userId]
+    );
+
+    res.status(200).json(tasksDoUsuario);
   } catch (error) {
     console.error('Erro ao excluir tarefa:', error);
     res.status(500).json({ message: 'Erro interno ao excluir tarefa.' });
   }
 };
+
 
 // ⬇️ Nova rota para download de arquivos
 export const downloadFile = async (req: Request, res: Response) => {
