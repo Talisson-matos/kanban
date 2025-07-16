@@ -18,7 +18,40 @@ interface Props {
   task: Task;
   handleDelete: (id: number) => void;
   abrirModalDeEdicao: (task: Task) => void;
+
+
 }
+
+
+const baixarArquivo = async (fileName: string) => {
+  try {
+    const res = await axios.get(`http://localhost:3000/api/download/${fileName}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      responseType: 'blob',
+    });
+
+    const mimeType = res.headers['content-type'];
+    const blob = new Blob([res.data], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+
+    // 👇 Abrir diretamente se for visualizável
+    if (mimeType.startsWith('image/') || mimeType === 'application/pdf' || mimeType.startsWith('text/')) {
+      window.open(url, '_blank');
+    } else {
+      // 📁 Se não der pra visualizar direto, força download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+    }
+  } catch (err) {
+    console.error('Erro ao baixar:', err);
+  }
+};
+
+
 
 // Função utilitária — certifique-se de que está fora de qualquer componente
 const calcularTempoDecorrido = (createdAt: string): string => {
@@ -81,14 +114,17 @@ export function TarefaDraggable({
         <div>Pendência: {calcularTempoDecorrido(task.created_at)}</div>
 
         {task.file_path && (
-          <a
-            href={task.file_path}
-            target="_blank"
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              baixarArquivo(task.file_path!);
+
+            }}
             className="text-blue-500 underline"
-            onClick={(e) => e.stopPropagation()}
           >
             📄 Baixar arquivo
-          </a>
+          </button>
+
         )}
       </div>
 
@@ -153,10 +189,10 @@ export default function Kanban() {
   const [isChecked, setIsChecked] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string>('a_fazer');
-  
+
   // Estados para as tarefas
   const [tasks, setTasks] = useState<Task[]>([]);
-  
+
   // Estados para o modal de edição
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
@@ -302,8 +338,8 @@ export default function Kanban() {
     const token = localStorage.getItem('token');
 
     // Atualizar estado local imediatamente
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
+    setTasks(prev => prev.map(task =>
+      task.id === taskId
         ? { ...task, status: novoStatus }
         : task
     ));
@@ -414,6 +450,7 @@ export default function Kanban() {
               tarefas={tasks.filter(task => task.status === status)}
               handleDelete={handleDelete}
               abrirModalDeEdicao={abrirModalDeEdicao}
+
             />
           ))}
         </div>
