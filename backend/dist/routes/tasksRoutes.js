@@ -1,0 +1,11 @@
+import express from 'express';
+import { ensureAuth } from '../middleware/authMiddleware.js';
+import { createTask, getTasks, upload, downloadFile, deleteTask, updateTask, updateStatus } from '../controllers/tasksControllers.js';
+const router = express.Router();
+router.post('/tasks', ensureAuth, upload.single('file'), createTask);
+router.post('/tasks/update-status', ensureAuth, updateStatus);
+router.get('/tasks', ensureAuth, getTasks);
+router.get('/download/:file', ensureAuth, downloadFile);
+router.delete('/tasks/:id', ensureAuth, deleteTask);
+router.put('/tasks/:id', ensureAuth, updateTask);
+export default router;

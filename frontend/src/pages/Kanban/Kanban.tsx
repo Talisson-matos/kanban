@@ -20,13 +20,6 @@ interface Task {
   status: string;
 }
 
-interface Props {
-  task: Task;
-  handleDelete: (id: number) => void;
-  abrirModalDeEdicao: (task: Task) => void;
-
-
-}
 
 
 const baixarArquivo = async (fileName: string) => {
@@ -217,7 +210,7 @@ export default function Kanban() {
   const [description, setDescription] = useState<string>('');
   const [isChecked, setIsChecked] = useState<boolean>(false);
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<string>('a_fazer');
+  const [status] = useState<string>('a_fazer');
 
   // Estados para as tarefas
   const [tasks, setTasks] = useState<Task[]>([]);
