@@ -3,6 +3,12 @@ import axios from 'axios';
 import type { ChangeEvent, FormEvent } from 'react';
 import { DndContext, closestCenter, useDraggable, useDroppable } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
+import './Kanban.css'
+import { BsFlagFill } from "react-icons/bs";
+import { RiFolderUploadFill } from "react-icons/ri";
+import { FaCircleCheck } from "react-icons/fa6";
+import { LiaPaperclipSolid } from "react-icons/lia";
+import { FaHandPaper } from "react-icons/fa";
 
 interface Task {
   id: number;
@@ -94,33 +100,48 @@ export function TarefaDraggable({
   return (
     <div
       ref={setNodeRef}
-      className="task-card bg-white p-4 rounded shadow-md flex flex-col gap-2"
+      className="kanban_field"
+      style={task.urgent ? { borderColor: 'blue', borderStyle: 'solid', borderWidth: '2px' } : {}}
     >
       {/* Handle de arrasto */}
       <div
         {...listeners}
         {...attributes}
-        className="drag-handle cursor-grab p-2 bg-gray-100 rounded hover:bg-gray-200 flex items-center justify-center"
+
         title="Arraste aqui para mover a tarefa"
       >
-        <span className="text-gray-600">↔️ Mover</span>
+        <span className="field_title"><FaHandPaper /></span>
       </div>
 
       {/* Conteúdo da tarefa */}
-      <div className="task-content">
-        <div className="font-bold">{task.title}</div>
-        <div>{task.description}</div>
-        <div>Urgente: {task.urgent ? 'Sim' : 'Não'}</div>
-        <div>
-          Criado em:{' '}
-          {new Date(task.created_at).toLocaleString('pt-BR', {
-            day: 'numeric',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </div>
+      <div className="task_content" >
+
+        {new Date(task.created_at).toLocaleString('pt-BR', {
+          day: 'numeric',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
         <div>Pendência: {calcularTempoDecorrido(task.created_at)}</div>
+
+        <div>{task.urgent ? <BsFlagFill style={{ color: "blue" }} /> : ' '}</div>
+      </div>
+      <div>
+
+
+        <div className="text_content">
+          <div className="task-title">{task.title}</div>
+          <div className='task_description'>{task.description}</div>
+        </div>
+
+
+
+
+      </div>
+
+      {/* Botões de ação */}
+      <div className="group_button_kanban">
+
 
         {task.file_path && (
           <button
@@ -129,33 +150,32 @@ export function TarefaDraggable({
               baixarArquivo(task.file_path!);
 
             }}
-            className="text-blue-500 underline"
+
           >
-            📄 Baixar arquivo
+         Dowload
           </button>
 
         )}
-      </div>
 
-      {/* Botões de ação */}
-      <div className="task-actions flex gap-2 mt-2">
+
+
         <button
-          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+          className=""
           onClick={(e) => {
             e.stopPropagation();
             handleDelete(task.id);
           }}
         >
-          🗑️ Deletar
+          Deletar
         </button>
         <button
-          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+          className=""
           onClick={(e) => {
             e.stopPropagation();
             abrirModalDeEdicao(task);
           }}
         >
-          ✏️ Editar
+          Editar
         </button>
       </div>
     </div>
@@ -177,7 +197,7 @@ function ColunaDroppable({
   const { setNodeRef } = useDroppable({ id });
 
   return (
-    <div ref={setNodeRef} style={{ padding: 10, border: '1px dashed black', minWidth: 250 }}>
+    <div ref={setNodeRef} style={{ padding: 10 }}>
       <h3>{id}</h3>
       {tarefas.map(task => (
         <TarefaDraggable
@@ -337,6 +357,16 @@ export default function Kanban() {
     }
   };
 
+  // 
+  const icon = document.getElementsByClassName('icon_checked')[0] as HTMLElement;
+  const border = document.getElementsByClassName('urgent_kanban')[0] as HTMLElement;
+  if (icon) {
+    icon.style.color = isChecked ? 'green' : 'blue';
+    border.style.borderColor = isChecked ? 'green' : 'transparent';
+
+  }
+
+
   // status
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -379,43 +409,67 @@ export default function Kanban() {
   };
 
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Nova tarefa"
-        />
+    <div className='container_kanban'>
+      <div className="content_kanban">
 
-        <input
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="Adicione descrição"
-        />
 
-        <label>
-          Urgente?
-          <input
-            type="checkbox"
-            checked={isChecked}
-            onChange={e =>
-              setIsChecked(e.target.checked)
-            }
-          />
-        </label>
+        <form className='form_kanban' onSubmit={handleSubmit}>
 
-        <input
-          type="file"
-          onChange={handleFileChange}
-        />
+          <div className="input_group">
 
-        {file && <p>Arquivo: {file.name}</p>}
+            <input className='input_kanban'
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Nova tarefa"
+            />
 
-        <button type="submit">Adicionar</button>
-      </form>
+            <textarea className='textarea_kanban'
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Adicione descrição"
+            > </textarea>
+
+          </div>
+
+          <hr />
+
+          <div className="submit_group">
+
+            <label className='urgent_kanban'>
+              <BsFlagFill className='icon_checked' />
+              <input className='input_checked'
+                type="checkbox"
+                checked={isChecked}
+                onChange={e =>
+                  setIsChecked(e.target.checked)
+                }
+              />
+            </label>
+
+
+            <div className="input_file_group">
+              <label htmlFor="fileUpload" className="custom-file-label"> {file ? <LiaPaperclipSolid /> : <RiFolderUploadFill />}</label>
+              <input
+                type="file" id='fileUpload'
+                onChange={handleFileChange}
+                className="hidden-input"
+              />
+
+
+            </div>
+
+
+            <button type="submit" className='button_submit'><FaCircleCheck /></button>
+          </div>
+
+        </form>
+
+
+
+      </div>
 
       {isEditing && (
-        <div style={{ background: '#eee', padding: '1rem', marginTop: '1rem' }}>
+        <div className='modal_kanban' style={{ background: '#eee', padding: '1rem', marginTop: '1rem' }}>
           <h3>Editar Tarefa</h3>
 
           <input
@@ -424,34 +478,38 @@ export default function Kanban() {
             placeholder="Título"
           />
 
-          <input
+          <textarea
             value={editDescription}
             onChange={e => setEditDescription(e.target.value)}
             placeholder="Descrição"
-          />
+          ></textarea>
 
-          <label>
-            Urgente?
-            <input
-              type="checkbox"
-              checked={editIsChecked}
-              onChange={e => setEditIsChecked(e.target.checked)}
-            />
-          </label>
+          <div className='content_kanban_modal'>
+            <label>
+              Urgência
+              <input
+                type="checkbox"
+                checked={editIsChecked}
+                onChange={e => setEditIsChecked(e.target.checked)}
+              />
+            </label>
 
-          <button onClick={atualizarTarefa}>Salvar alterações</button>
-          <button onClick={() => {
-            setIsEditing(false);
-            setEditTitle('');
-            setEditDescription('');
-            setEditIsChecked(false);
-            setTaskToEdit(null);
-          }}>Cancelar</button>
+            <button onClick={atualizarTarefa}>Salvar</button>
+            <button onClick={() => {
+              setIsEditing(false);
+              setEditTitle('');
+              setEditDescription('');
+              setEditIsChecked(false);
+              setTaskToEdit(null);
+            }}>Cancelar</button>
+          </div>
         </div>
+
+
       )}
 
       <DndContext onDragEnd={onDragEnd} collisionDetection={closestCenter}>
-        <div style={{ display: 'flex', gap: '2rem', cursor: 'grabbing' }}>
+        <div className='kanban_board' >
           {['a_fazer', 'fazendo', 'feito'].map(status => (
             <ColunaDroppable
               key={status}

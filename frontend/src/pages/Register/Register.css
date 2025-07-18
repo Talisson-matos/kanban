@@ -1,0 +1,83 @@
+.container_register{
+    background-image: url('../../../public/caspio.png');
+    height: 100vh;
+    background-size: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form_register{
+    display: flex;
+    border: 1px solid white;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 300px;
+    height: 340px;
+    padding: 12px;
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+}
+
+.title_register{
+     text-align: center;
+    font-size: 2em;
+    color: aliceblue;
+    text-shadow:  0 0 1px black;
+}
+
+.input_group_register{
+     border: 1px solid white;
+    height: 40px;
+    position: relative;
+    border-radius: 8px;
+}
+
+.input_group_register input{
+    width: 100%;
+    height: inherit;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    padding: 0 1rem ;
+    caret-color: white;
+}
+
+.input_group_register input:focus{
+      outline: none;
+    padding: 0 1rem;
+}
+
+.input_group_register label{
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    color: aliceblue;
+    transition: all 0.3s ease-in-out;
+}
+
+
+.input_group_register input:focus + label, 
+.input_group_register input:not(:placeholder-shown) + label
+{   
+    top: -20px;
+    font-size: 0.9rem;
+   
+}
+
+.btn_register{
+     width: 100%;    
+    height: 40px;
+    cursor: pointer;
+    color: #111;
+    background-color: aliceblue;
+    border: 1px solid transparent;
+
+}
+
+.btn_register:hover{
+     color: aliceblue;
+    background-color: transparent;
+    border: 1px solid aliceblue;
+    transition: all .2s ease-in;
+}

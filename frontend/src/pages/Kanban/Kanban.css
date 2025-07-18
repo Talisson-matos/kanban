@@ -1,0 +1,303 @@
+.container_kanban {
+    background: url('../../../public/okhotsk.png');
+    height: 100vh;
+    background-position: center;
+    background-size: cover;
+    overflow: auto;
+    background-repeat: repeat;
+}
+
+.content_kanban {
+    height: 30%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form_kanban {
+    display: flex;
+    gap: 10px;
+    border: 6px solid azure;
+    padding: 16px;
+    backdrop-filter: blur(5px);
+}
+
+.input_kanban {
+    height: 30px;
+    width: 400px;
+    padding: 0 10px;
+    outline: none;
+    background: azure;
+    border: none
+}
+
+.input_group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+}
+
+.textarea_kanban {
+    height: 100%;
+    outline: none;
+    background: azure;
+    resize: none;
+    border: none;
+    padding: 10px;
+
+}
+
+.submit_group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+hr {
+    width: 4px;
+    background: azure;
+    border: none;
+}
+
+.urgent_kanban {
+    border: 2px solid white;
+    background: azure;
+    width: 40px;
+    aspect-ratio: 1;
+    position: relative;
+    padding: 6px;
+    height: fit-content;
+    border-radius: 4px;
+    border-color: red;
+    cursor: pointer;
+    position: relative;
+}
+
+.icon_checked {
+    font-size: 1.5em;
+
+}
+
+.input_checked {
+    position: absolute;
+    left: 0;
+
+
+}
+
+input[type="checkbox"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px;
+    aspect-ratio: 1;
+    opacity: 0;
+    cursor: pointer;
+
+
+
+}
+
+
+/* input file */
+
+.hidden-input {
+    display: none;
+}
+
+.custom-file-label {
+    background-color: azure;
+    color: blue;
+    width: 40px;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background-color 0.3s ease;
+}
+
+
+.input_file_group {
+    display: flex;
+    align-items: center !important;
+
+
+}
+
+.button_submit {
+    height: max-content;
+    background: azure;
+    width: 40px;
+    aspect-ratio: 1;
+    cursor: pointer;
+    border: none;
+    color: blue;
+    border-radius: 6px;
+}
+
+.button_submit:hover {
+    background: #b1b2ee;
+}
+
+.kanban_board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    cursor: grabbing;
+}
+
+.task_content {
+    margin: 4px 0;
+    display: flex;
+    justify-content: space-around;
+    font-style: italic;
+    margin: 6px 0;
+    color: blue;
+}
+
+.text_content{
+    border: 3px solid azure;
+    margin: 1rem 0;
+    padding: 4px;
+  
+}
+
+
+.kanban_field {
+    background: rgba(255, 255, 255, 0.6);
+    margin-bottom: 8px;
+    border-radius: 4px;
+    padding: 1rem;
+    box-sizing: border-box;
+    border: 3px solid transparent;
+}
+
+.field_title {
+    padding: 4px 100% 4px 2px;
+    background: rgb(0, 161, 161);
+    color: azure;    
+}
+
+.task-title {
+    font-size: 1.4em;
+    text-transform: capitalize;
+    font-weight: bold;
+    background: azure;
+    width: fit-content;
+    font-style: italic;
+    padding: 2px;
+}
+
+.task_description {
+    text-align: justify;
+}
+
+.group_button_kanban {
+    display: grid;
+    grid-template-rows: 30px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+}
+
+.group_button_kanban button{
+    border: none;
+    background: rgb(0, 161, 161);
+    color: azure;
+    cursor: pointer;
+}
+
+h3{
+    text-align: center;
+    text-transform: capitalize;
+    margin-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.modal_kanban {
+    position: absolute;
+    width: 400px;
+    z-index: 99;
+    right: 50%;
+    top: 50%;
+    transform: translate(50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-radius: 6px;
+    background: #222 !important;
+    color: #eee;
+
+}
+
+.modal_kanban input {
+    width: 100%;
+    height: 30px;
+    border: none;
+    padding: 5px;
+    background: #777 !important;
+    outline: none;
+}
+
+.modal_kanban textarea {
+    resize: none;
+    width: 100%;
+    height: 80px;
+    padding: 5px;
+    border: none;
+    background: #777 !important;
+    outline: none;
+}
+
+.modal_kanban input[type="checkbox"] {
+    opacity: 1 !important;
+    position: relative;
+    left: 0;
+}
+
+.content_kanban_modal {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+
+    label {
+        display: flex;
+        align-items: center;
+    }
+
+    button {
+        cursor: pointer;
+        background-color: #666;
+        border: none;
+    }
+}
+
+
+@media (max-width: 850px) {
+    .kanban_board {
+        display: grid;
+        grid-template-columns: 1fr;
+
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .input_kanban{
+        width: fit-content;
+    }
+
+   .modal_kanban{
+    width: fit-content;
+   }
+}
+
+
+
+
+/* display: 'flex', gap: '2rem', cursor: 'grabbing' */
